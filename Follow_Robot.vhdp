@@ -1,0 +1,394 @@
+Main
+(
+
+    Camera_CLK_Lane      : IN     STD_LOGIC;
+    Camera_Data_Lane     : IN     STD_LOGIC_VECTOR (1 downto 0);
+    Camera_Enable        : OUT    STD_LOGIC;
+    Camera_SCL           : INOUT  STD_LOGIC;
+    Camera_SDA           : INOUT  STD_LOGIC;
+
+    HDMI_DATA            : OUT    STD_LOGIC_VECTOR(2 downto 0);
+    HDMI_CLK             : OUT    STD_LOGIC;
+    HDMI_HPD             : IN     STD_LOGIC;
+
+    Data_Out             : OUT STD_LOGIC;
+    
+    Motor_LF            : OUT STD_LOGIC;  --M2.1
+    Motor_LB            : OUT STD_LOGIC;  --M2.2
+    Motor_RF            : OUT STD_LOGIC;  --M1.1
+    Motor_RB            : OUT STD_LOGIC;  --M1.2
+    
+)
+{
+
+
+--GENERATED SIGNALS---------------------------------------------------------------------------------------------
+
+    --Camera and HDMI----------------------------------------------------------------------------------------
+
+    --More Settings in Libraries/Image_Data.vhdp
+
+    --1 = saves image before output 0 = direcly ouptuts image (doesn't work with all monitors)
+    CONSTANT Use_Capture : NATURAL := 1;
+
+    --For direct ouput is set by VS_PLL and has to be VS_SCLK/10 otherwise set by VS_RAM_PLL
+    CONSTANT Pixel_Clock : NATURAL := 28000000 + Use_Capture*22000000;
+
+    --Settings for capture
+    CONSTANT Capture_Compression : NATURAL := 2;  --Image size divider
+    CONSTANT Capture_Width       : NATURAL := 1;  --Color depth
+    CONSTANT Capture_RGB         : BOOLEAN := true;
+
+--GENERATED CODE------------------------------------------------------------------------------------------------
+
+    --Camera and HDMI----------------------------------------------------------------------------------------
+
+    --Output_Stream <= Draw_Squares_oStream;   --Add component in line 135 (Center Direction can't be connected as well)
+    --Output_Stream <= Red_Threshold_Stream;
+    --Output_Stream <= Camera_Stream;
+    
+    --Motor and Encoder----------------------------------------------------------------------------------------
+
+    Process ()
+    {
+        Thread
+        {
+            CONSTANT speed   : NATURAL := 180;
+            CONSTANT speed_t : NATURAL := 170;
+            VARIABLE speed_r : INTEGER range -255 to 255 := 0;
+            VARIABLE speed_l : INTEGER range -255 to 255 := 0;
+            
+            If(Center_Direction_Move_Left)
+            {
+                speed_l     := (-1)*speed_t;
+                speed_r     := speed_t;
+            }
+            Elsif(Center_Direction_Move_Right)
+            {
+                speed_l     := speed_t;
+                speed_r     := (-1)*speed_t;
+            }
+            Elsif(Center_Direction_Move_Down)
+            {
+                speed_l     := speed;
+                speed_r     := speed;
+            }
+            Elsif(Center_Direction_Move_Up)
+            {
+                speed_l     := (-1)*speed;
+                speed_r     := (-1)*speed;
+            }
+            Else
+            {
+                speed_l     := 0;
+                speed_r     := 0;
+            }
+        }
+        
+        If(speed_l > 0)
+        {
+            Motor_LB <= '0';
+            Motor_LF <= pwm_l;
+        }
+        Else
+        {
+            Motor_LF <= '0';
+            Motor_LB <= pwm_l;
+        }
+        
+        If(speed_r > 0)
+        {
+            Motor_RB <= '0';
+            Motor_RF <= pwm_r;
+        }
+        Else
+        {
+            Motor_RF <= '0';
+            Motor_RB <= pwm_r;
+        }
+        
+        duty_l <= STD_LOGIC_VECTOR(TO_UNSIGNED(abs(speed_l), duty_l'LENGTH));
+        duty_r <= STD_LOGIC_VECTOR(TO_UNSIGNED(abs(speed_r), duty_r'LENGTH));
+    }
+    
+    SIGNAL pwm_r : STD_LOGIC := '0';
+    SIGNAL duty_r : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    NewComponent PWM_Generator
+    (
+        Duty            => duty_r,
+        PWM_Out(0)      => pwm_r,
+    );
+    
+    SIGNAL pwm_l : STD_LOGIC := '0';
+    SIGNAL duty_l : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    NewComponent PWM_Generator
+    (
+        Duty            => duty_l,
+        PWM_Out(0)      => pwm_l,
+    );
+
+--GENERATED COMPONENTS------------------------------------------------------------------------------------------
+
+    --Camera and HDMI----------------------------------------------------------------------------------------
+
+--Camera Interface-------------------------------------------------------------------
+
+    Camera_Enable <= '1';
+
+    --Select pixel clock depending on output type
+    Camera_PCLK   <= VS_PCLK when Use_Capture = 0 else SYS_CLK;
+
+    --Receive CSI Data
+    SIGNAL Camera_Stream         : rgb_stream;
+    SIGNAL Camera_PCLK           : STD_LOGIC;
+    NewComponent CSI_Camera
+    (
+        CLK_Frequency => Pixel_Clock,
+        CLK_as_PCLK   => Use_Capture = 0,
+
+        CLK           => Camera_PCLK,
+
+        Reset         => '0',
+        CLK_Lane      => Camera_CLK_Lane,
+        Data_Lane     => Camera_Data_Lane,
+        SCL           => Camera_SCL,
+        SDA           => Camera_SDA,
+
+        oStream       => Camera_Stream,
+    );
+
+    --Filter Red Pixels------------------------------------------------------------------
+    
+    --Convert to HSV color space
+    SIGNAL HSV_Stream          : rgb_stream;
+    NewComponent RGB2HSV_Filter
+    (
+        CLK_Edge => false,
+
+        iStream  => Camera_Stream,
+        oStream  => HSV_Stream,
+    );
+
+    --Filter red pixels
+    SIGNAL Red_Threshold_Stream : rgb_stream;
+    NewComponent Color_Threshold_HSV_Filter
+    (
+        CLK_Edge => true,
+
+        H_Min    => 0,        --Min Hue (0°-180°)
+        H_Max    => 255,      --Max Hue (0°-180°)
+        S_Min    => 0,        --Min Saturation (0-255)
+        S_Max    => 5,       --Max Saturation (0-255)
+        V_Min    => 240,      --Min Brightness (0-255)
+        V_Max    => 255,      --Max Brightness (0-255)
+        iStream  => HSV_Stream,
+        oStream  => Red_Threshold_Stream,
+    );
+    
+    SIGNAL Blob_Detect_Blob_Busy       : STD_LOGIC;
+    SIGNAL Blob_Detect_Blobs           : NATURAL   range 0 to 32;
+    SIGNAL Blob_Detect_Blob_Addr       : NATURAL   range 0 to 32-1;
+    SIGNAL Blob_Detect_Blob_X0         : NATURAL   range 0 to Image_Width-1;
+    SIGNAL Blob_Detect_Blob_X1         : NATURAL   range 0 to Image_Width-1;
+    SIGNAL Blob_Detect_Blob_Y0         : NATURAL   range 0 to Image_Height-1;
+    SIGNAL Blob_Detect_Blob_Y1         : NATURAL   range 0 to Image_Height-1;
+    NewComponent Blob_Detect
+    (
+        Blob_Number     => 32,
+        Blob_Buffer     => 8,
+        Edge_Reg_Size   => 3,
+        Min_Blob_Width  => 10,
+        Min_Blob_Height => 10,
+        Max_Blob_Width  => Image_Width,
+        Max_Blob_Height => Image_Height,
+        Upscale_Mult    => 1,
+        Upscale_Start   => 0,
+
+        New_Pixel       => Red_Threshold_Stream.New_Pixel,
+        Pixel_In        => Red_Threshold_Stream.R(0),
+        Column          => Red_Threshold_Stream.Column,
+        Row             => Red_Threshold_Stream.Row,
+        Blob_Busy       => Blob_Detect_Blob_Busy,
+        Blobs           => Blob_Detect_Blobs,
+        Blob_Addr       => Blob_Detect_Blob_Addr,
+        Blob_X0         => Blob_Detect_Blob_X0,
+        Blob_X1         => Blob_Detect_Blob_X1,
+        Blob_Y0         => Blob_Detect_Blob_Y0,
+        Blob_Y1         => Blob_Detect_Blob_Y1,
+    );
+    /*
+    SIGNAL Draw_Squares_oStream           : rgb_stream;
+    NewComponent Draw_Squares
+    (
+        Max_Square_Number => 32,
+        Width             => 4,
+        Color             => x"FF0000",
+
+        Squares           => Blob_Detect_Blobs,
+        Square_Addr       => Blob_Detect_Blob_Addr,
+        Square_X0         => Blob_Detect_Blob_X0,
+        Square_X1         => Blob_Detect_Blob_X1,
+        Square_Y0         => Blob_Detect_Blob_Y0,
+        Square_Y1         => Blob_Detect_Blob_Y1,
+        iStream           => Red_Threshold_Stream,
+        oStream           => Draw_Squares_oStream,
+    );
+    */
+    --Track light position-------------------------------------------------------------
+    
+    SIGNAL Center_Direction_Move_Up         : BOOLEAN;
+    SIGNAL Center_Direction_Move_Down       : BOOLEAN;
+    SIGNAL Center_Direction_Move_Right      : BOOLEAN;
+    SIGNAL Center_Direction_Move_Left       : BOOLEAN;
+    SIGNAL x : NATURAL range 0 to Image_Width;
+    NewComponent Center_Direction
+    (
+        Max_Blob_Number => 32,
+        Max_Offset      => 40,
+        
+        CLK             => SYS_CLK,
+        
+        Blobs           => Blob_Detect_Blobs,
+        Blob_Addr       => Blob_Detect_Blob_Addr,
+        Blob_X0         => Blob_Detect_Blob_X0,
+        Blob_X1         => Blob_Detect_Blob_X1,
+        Blob_Y0         => Blob_Detect_Blob_Y0,
+        Blob_Y1         => Blob_Detect_Blob_Y1,
+        
+        Move_Up         => Center_Direction_Move_Up,
+        Move_Down       => Center_Direction_Move_Down,
+        Move_Right      => Center_Direction_Move_Right,
+        Move_Left       => Center_Direction_Move_Left,
+        
+        x => x,
+    );
+    
+    SIGNAL LED_Strip_Address       : NATURAL          range 0 to 17;
+    SIGNAL LED_Strip_Pixel         : STD_LOGIC_VECTOR (23 downto 0);
+    SIGNAL LED_Strip_Update        : STD_LOGIC := '0';
+    
+    NewComponent LED_Strip_Interface
+    (
+        LEDs          => 18,
+
+        Update        => LED_Strip_Update,
+        Data_Out      => Data_Out,
+        Address       => LED_Strip_Address,
+        Pixel         => LED_Strip_Pixel,
+    );
+    
+    --Show light position with led strip
+    Process ()
+    {
+        VARIABLE pos : INTEGER range 0 to 17:= 9;
+        
+        pos := 16 - (x / (Image_Width/14));
+        
+        Thread
+        {
+            LED_Strip_Update <= '1';
+            Wait(250ms);
+        }
+        
+        If(LED_Strip_Address = pos)
+        {
+            LED_Strip_Pixel <= x"FF0000";
+        }
+        Elsif(LED_Strip_Address = pos+1 OR LED_Strip_Address = pos-1)
+        {
+            LED_Strip_Pixel <= x"AA0055";
+        }
+        Elsif(LED_Strip_Address = pos+2 OR LED_Strip_Address = pos-2)
+        {
+            LED_Strip_Pixel <= x"5500AA";
+        }
+        Else
+        {
+            LED_Strip_Pixel <= x"0000FF";
+        }
+    }
+
+    --Output image with HDMI-------------------------------------------------------------
+
+    SIGNAL Output_Stream : rgb_stream;
+    
+    --First saves image and then outputs it with correct timing
+    SIGNAL SYS_CLK             : STD_LOGIC;
+    SIGNAL Capture_Read_Column : NATURAL          range 0 to 639;
+    SIGNAL Capture_Read_Row    : NATURAL          range 0 to 479;
+    SIGNAL Capture_Read_Data   : STD_LOGIC_VECTOR (23 downto 0);
+    Generate (if Use_Capture = 1)
+    {
+        NewComponent Camera_Capture
+        (
+            Compression => Capture_Compression,
+            Width       => Capture_Width,
+            Full_Image  => true,
+            RGB         => Capture_RGB,
+            CLK_Edge    => false,
+            
+            iStream     => Output_Stream,
+            Read_Column => Capture_Read_Column,
+            Read_Row    => Capture_Read_Row,
+            Read_Data   => Capture_Read_Data,
+        );
+        
+        NewComponent VS_RAM_Interface
+        (
+            Read_Column    => Capture_Read_Column,
+            Read_Row       => Capture_Read_Row,
+            Read_Data      => Capture_Read_Data,
+            SYS_CLK        => SYS_CLK,
+            VS_PCLK        => VS_PCLK,
+            VS_SCLK        => VS_SCLK,
+            VS_R           => VS_R,
+            VS_G           => VS_G,
+            VS_B           => VS_B,
+            VS_HS          => VS_HS,
+            VS_VS          => VS_VS,
+            VS_DE          => VS_DE,
+        );
+    }
+    
+    --Convert rgb_stream to video stream
+    Generate (if Use_Capture = 0)
+    {
+        NewComponent VS_Converter
+        (
+            iStream => Output_Stream,
+            VS_PCLK => VS_PCLK,
+            VS_SCLK => VS_SCLK,
+            VS_R    => VS_R,
+            VS_G    => VS_G,
+            VS_B    => VS_B,
+            VS_HS   => VS_HS,
+            VS_VS   => VS_VS,
+            VS_DE   => VS_DE,
+        );
+    }
+    
+    --Output video stream with hdmi interface
+    SIGNAL VS_PCLK   : STD_LOGIC;
+    SIGNAL VS_SCLK   : STD_LOGIC;
+    SIGNAL VS_R      : STD_LOGIC_VECTOR (7 downto 0);
+    SIGNAL VS_G      : STD_LOGIC_VECTOR (7 downto 0);
+    SIGNAL VS_B      : STD_LOGIC_VECTOR (7 downto 0);
+    SIGNAL VS_HS     : STD_LOGIC;
+    SIGNAL VS_VS     : STD_LOGIC;
+    SIGNAL VS_DE     : STD_LOGIC;
+    NewComponent HDMI_Out
+    (
+        VS_PCLK    => VS_PCLK,
+        VS_SCLK    => VS_SCLK,
+        VS_R       => VS_R,
+        VS_G       => VS_G,
+        VS_B       => VS_B,
+        VS_HS      => VS_HS,
+        VS_VS      => VS_VS,
+        VS_DE      => VS_DE,
+
+        HDMI_DATA  => HDMI_DATA,
+        HDMI_CLK   => HDMI_CLK,
+        HDMI_HPD   => HDMI_HPD,
+    );
+}

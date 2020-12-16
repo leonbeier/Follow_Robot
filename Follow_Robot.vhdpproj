@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<ProjectRoot xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Header>Follow_Robot</Header>
+  <Items xsi:type="ProjectFolder">
+    <Header>Generated</Header>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Blob_Detect.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>CSI_Camera.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Camera_Capture.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Center_Direction.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Color_Threshold_HSV_Filter.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Draw_Squares.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Follow_Robot.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>HDMI_Out.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>I2C_Master_Interface.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Image_Data_Package.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>LED_Strip_Interface.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Motor_Controller.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Motor_Encoder.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>Motor_Route_Drive.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>PWM_Generator.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>RGB2HSV_Filter.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>VS_Converter.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>VS_RAM_Interface.vhd</Header>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFolder">
+    <Header>Libraries</Header>
+    <Items xsi:type="ProjectFolder">
+      <Header>CSI_Camera</Header>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>ALTDDIO_IN.qsys.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>ALTSYNCRAM.qsys.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>CSI_Camera.vhdp</Header>
+      </Items>
+    </Items>
+    <Items xsi:type="ProjectFolder">
+      <Header>HDMI</Header>
+      <Items xsi:type="ProjectFileVerilog">
+        <Header>DVI_OUT.v</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>HDMI_Out.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVerilog">
+        <Header>TMDS_ENCODE.v</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>VS_Converter.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFile">
+        <Header>VS_PLL.qip</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDL">
+        <Header>VS_PLL.vhd</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>VS_RAM_Interface.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFile">
+        <Header>VS_RAM_PLL.qip</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDL">
+        <Header>VS_RAM_PLL.vhd</Header>
+      </Items>
+    </Items>
+    <Items xsi:type="ProjectFolder">
+      <Header>Motor</Header>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>Motor_Controller.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>Motor_Encoder.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>Motor_Route_Drive.vhdp</Header>
+      </Items>
+      <Items xsi:type="ProjectFileVHDP">
+        <Header>PWM.vhdp</Header>
+      </Items>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>Blob_Detect.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>Camera_Capture.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>Color_Threshold_HSV.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>I2C.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>Image_Data.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>LED_Strip_Interface.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>RGB2HSV.vhdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>Squares.vhdp</Header>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFileVHDP">
+    <Header>Center_Direction.vhdp</Header>
+  </Items>
+  <Items xsi:type="ProjectFileVHDP">
+    <Header>Follow_Robot.vhdp</Header>
+  </Items>
+  <CruviHSExtensions>
+    <string>CameraExtension</string>
+  </CruviHSExtensions>
+  <CruviLSExtensions>
+    <string>MotorExtension</string>
+    <string xsi:nil="true" />
+    <string xsi:nil="true" />
+    <string xsi:nil="true" />
+  </CruviLSExtensions>
+  <IOVoltage>0</IOVoltage>
+  <UseShield>false</UseShield>
+</ProjectRoot>
